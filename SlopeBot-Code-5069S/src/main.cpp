@@ -45,6 +45,8 @@ motor_group L= motor_group(FL, ML, BL);
 ╚═╝░░╚═╝░╚════╝░╚═════╝░░╚════╝░░░░╚═╝░░░  ░╚════╝░░╚════╝░╚═╝░░╚══╝░░░╚═╝░░░╚═╝░░╚═╝░╚════╝░╚══════╝╚═════╝░
 */
 
+  //test test... 1 2, 1 2
+
   int R_percentage = 0;
   int L_percentage = 0;
   int axis_R = 0;
