@@ -53,7 +53,8 @@ motor_group L= motor_group(FL, ML, BL);
   int L_speed = 0;
   int R_run = 0;
   int L_run = 0;
-  float maxStep = 5; // %   NEED TO TUNE
+  float maxStep = 2; // %   NEED TO TUNE
+  float ImaxStep = 0.5 // increase maxstep, less since we have acceleration dampening
 
   int drivetrain_controls()
   {
@@ -61,11 +62,18 @@ motor_group L= motor_group(FL, ML, BL);
     //Axis 1 is left/right
     while(true){
 
+    float setVolt (float percentage)
+      {
+        // 0.12 = 12/100
+        return (percentage * 0.12);
+      }
+      
     //old is 0.7 for axis 1
     // determines the value of the joystick
     axis_R = (Controller1.Axis3.position(pct) + 0.5*Controller1.Axis1.position(pct));
     axis_L = (Controller1.Axis3.position(pct) - 0.5*Controller1.Axis1.position(pct));
 
+      
       //rejects low values to stop static jitter
       if (abs(axis_R) < 5)
       {
@@ -99,14 +107,14 @@ motor_group L= motor_group(FL, ML, BL);
     double rate_L = axis_R - R_speed;
 
     //rate of change modifier
-    float s = 0.1;                  //NEED TO TUNE
+    float s = 0.03;                  //NEED TO TUNE
       R_percentage -= rate_R * s;
       L_percentage -= rate_L * s;
 
     //right side dampening
-    if (R_percentage > R_run + maxStep)
+    if (R_percentage > R_run + ImaxStep)
     {
-      R_run += maxStep; 
+      R_run += ImaxStep; 
     }
     else if (R_percentage < R_run - maxStep)
     {
@@ -118,9 +126,9 @@ motor_group L= motor_group(FL, ML, BL);
     }
 
     //left side dampening
-    if (L_percentage > L_run + maxStep)
+    if (L_percentage > L_run + ImaxStep)
     {
-      L_run += maxStep; 
+      L_run += ImaxStep; 
     }
     else if (L_percentage < L_run - maxStep)
     {
@@ -151,9 +159,12 @@ motor_group L= motor_group(FL, ML, BL);
       L_run = -100;
     }
 
+    int right_volt = setVolt(-R_run);
+    int left_volt = setVolt(-L_run);
+      
     //runnning the motors
-    R.spin(fwd, -R_run, pct);
-    L.spin(fwd, -L_run, pct);
+    R.spin(fwd, right_volt, pct);
+    L.spin(fwd, left_volt, pct);
 
     wait(10, msec);
 
