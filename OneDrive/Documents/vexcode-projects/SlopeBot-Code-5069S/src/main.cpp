@@ -58,15 +58,16 @@ motor_group L= motor_group(FL, ML, BL);
 
   int drivetrain_controls()
   {
-    //Axis 3 is up/down
-    //Axis 1 is left/right
-    while(true){
 
     float setVolt (float percentage)
       {
         // 0.12 = 12/100
         return (percentage * 0.12);
       }
+    
+    //Axis 3 is up/down
+    //Axis 1 is left/right
+    while(true){
       
     //old is 0.7 for axis 1
     // determines the value of the joystick
@@ -87,6 +88,8 @@ motor_group L= motor_group(FL, ML, BL);
       //the rpm of both motor groups (used for dampening)
       R_speed = (R.velocity(rpm) / 6);
       L_speed = (L.velocity(rpm) / 6);
+
+      //----------Potentially use FR and FL instead of the motor groups
 
     //R_percentage = ((0.665*pow(axis_R, 3))/(7000))+0.05*(axis_R);
     //L_percentage = ((0.665*pow(axis_L, 3))/(7000))+0.05*(axis_L);
@@ -163,8 +166,8 @@ motor_group L= motor_group(FL, ML, BL);
     int left_volt = setVolt(-L_run);
       
     //runnning the motors
-    R.spin(fwd, right_volt, pct);
-    L.spin(fwd, left_volt, pct);
+    R.spin(fwd, right_volt, volt);
+    L.spin(fwd, left_volt, volt);
 
     wait(10, msec);
 
