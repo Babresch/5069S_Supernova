@@ -54,16 +54,19 @@ motor_group L= motor_group(FL, ML, BL);
   int R_run = 0;
   int L_run = 0;
   float maxStep = 2; // %   NEED TO TUNE
-  float ImaxStep = 0.5 // increase maxstep, less since we have acceleration dampening
+  float ImaxStep = 0.5; // increase maxstep, less since we have acceleration dampening
 
-  int drivetrain_controls()
-  {
-
-    float setVolt (float percentage)
+  //percentage to voltage function
+  float setVolt (float percentage)
       {
         // 0.12 = 12/100
         return (percentage * 0.12);
       }
+
+
+  int drivetrain_controls()
+  {
+
     
     //Axis 3 is up/down
     //Axis 1 is left/right
@@ -170,27 +173,7 @@ motor_group L= motor_group(FL, ML, BL);
     L.spin(fwd, left_volt, volt);
 
     wait(10, msec);
-
-
-    /* BAD
-    // only runs the drivetrain normally if a value is present (used to avoid conflict with the dampening)
-    if (Controller1.Axis3.position(pct) != 0 && Controller1.Axis1.position(pct) != 0)
-    {
-    R.spin(fwd, -R_percentage, pct);
-    L.spin(fwd, -L_percentage, pct);
-    }
-
-    //if the joystick is moved to zero the deceleration is damped
-    if (Controller1.Axis3.position(pct) == 0 && Controller1.Axis1.position(pct) == 0)
-    {
-      R_percentage = 0.75 * R_speed;
-      L_percentage = 0.75 * L_speed;
-
-      R.spin(fwd, -R_percentage, pct);
-      L.spin(fwd, -L_percentage, pct);
-      
-      }
-    */
+    
   }
 }
 
