@@ -54,7 +54,7 @@ motor_group L= motor_group(FL, ML, BL);
   int R_run = 0;
   int L_run = 0;
   float maxStep = 2; // %   NEED TO TUNE
-  float ImaxStep = 0.5; // increase maxstep, less since we have acceleration dampening
+  float ImaxStep = 0.75; // increase maxstep, less since we have acceleration dampening //Increased maxstep from 0.5 to 0.75
 
   //percentage to voltage function
   float setVolt (float percentage)
@@ -74,16 +74,30 @@ motor_group L= motor_group(FL, ML, BL);
       
     //old is 0.7 for axis 1
     // determines the value of the joystick
-    axis_R = (Controller1.Axis3.position(pct) + 0.5*Controller1.Axis1.position(pct));
-    axis_L = (Controller1.Axis3.position(pct) - 0.5*Controller1.Axis1.position(pct));
+    axis_R_value = (Controller1.Axis3.position(pct) + 0.75*Controller1.Axis1.position(pct));
+    axis_L_value = (Controller1.Axis3.position(pct) - 0.75*Controller1.Axis1.position(pct));
 
+    float maxValue = axis_R_value;
+      if (maxValue < axis_L_value) {
+      maxValue = axis_L_value;
+    }
+
+      if (maxValue > 100) {
+        axis_R_value = (axis_R_value/maxstep) * 100
+        axis_L_value = (axis_L_value/maxstep) * 100
+      }
+
+      axis_R = axis_R_value;
+      axis_L = axis_L_value;
       
       //rejects low values to stop static jitter
-      if (abs(axis_R) < 5)
+      //deadzone
+      //OLD 5
+      if (abs(axis_R) < 0)
       {
         axis_R = 0;
       }
-      if (abs(axis_L) < 5)
+      if (abs(axis_L) < 0)
       {
         axis_L = 0;
       }
