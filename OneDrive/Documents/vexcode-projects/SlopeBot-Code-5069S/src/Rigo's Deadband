@@ -1,0 +1,28 @@
+ float DeadBand(float input, float width)
+     {
+       if (std::fabs(input)<width)
+       {
+         return(0);
+       }
+       return(input);
+
+     }
+  float ToVolt(float percent)
+  {
+    return(percent*12.0/100.0);
+  }
+  float ts = 1;
+  float extra = 0; 
+  int Drive()
+  {
+    float throttle;
+    float turn;
+    while(true)
+    {
+      throttle = DeadBand(Controller1.Axis3.value(), 5);
+      turn = DeadBand(Controller1.Axis1.value(), 5); 
+      R.spin(fwd, ((ToVolt(throttle+turn)) + (ToVolt(extra*0)))/4, volt); 
+      L.spin(fwd, ((ToVolt(throttle+turn)) + (ToVolt(extra*0)))/4, volt);
+    }
+  return 0; 
+  }
