@@ -47,14 +47,18 @@ motor_group L= motor_group(FL, ML, BL);
 
   int R_percentage = 0;
   int L_percentage = 0;
+  int axis_R_value = 0;
+  int axis_L_value = 0;
   int axis_R = 0;
   int axis_L = 0;
   int R_speed = 0;
   int L_speed = 0;
   int R_run = 0;
   int L_run = 0;
-  float maxStep = 2; // %   NEED TO TUNE
-  float ImaxStep = 0.75; // increase maxstep, less since we have acceleration dampening //Increased maxstep from 0.5 to 0.75
+  int t_value;
+  int d_value;
+  float maxStep = 6; // %   NEED TO TUNE old 2
+  float ImaxStep = 8; // increase maxstep, less since we have acceleration dampening
 
   //percentage to voltage function
   float setVolt (float percentage)
@@ -67,71 +71,52 @@ motor_group L= motor_group(FL, ML, BL);
   int drivetrain_controls()
   {
 
-    
-    //Axis 3 is up/down
-    //Axis 1 is left/right
     while(true){
-      
-    //old is 0.7 for axis 1
-    // determines the value of the joystick
-    axis_R_value = (Controller1.Axis3.position(pct) + 0.75*Controller1.Axis1.position(pct));
-    axis_L_value = (Controller1.Axis3.position(pct) - 0.75*Controller1.Axis1.position(pct));
 
-    float maxValue = axis_R_value;
+    d_value = Controller1.Axis3.position(pct);
+    t_value = 0.85*Controller1.Axis1.position(pct);
+
+    axis_R_value = (d_value + t_value);
+    axis_L_value = (d_value - t_value);
+
+  
+      float maxValue = axis_R_value;
       if (maxValue < axis_L_value) {
       maxValue = axis_L_value;
     }
 
       if (maxValue > 100) {
-        axis_R_value = (axis_R_value/maxstep) * 100
-        axis_L_value = (axis_L_value/maxstep) * 100
+        axis_R_value = (axis_R_value/maxValue) * 100;
+        axis_L_value = (axis_L_value/maxValue) * 100;
       }
+    
 
-      axis_R = axis_R_value;
-      axis_L = axis_L_value;
-      
-      //rejects low values to stop static jitter
-      //deadzone
-      //OLD 5
-      if (abs(axis_R) < 0)
+      if (abs(d_value) < 2 && abs(t_value) < 2)
       {
-        axis_R = 0;
-      }
-      if (abs(axis_L) < 0)
-      {
-        axis_L = 0;
+        R.stop(coast);
+        L.stop(coast);
       }
 
-      //the rpm of both motor groups (used for dampening)
-      R_speed = (R.velocity(rpm) / 6);
-      L_speed = (L.velocity(rpm) / 6);
+    //fast
+    //R_percentage = ((0.665*pow(axis_R_value, 3))/(7000))+0.05*(axis_R_value);
+    //L_percentage = ((0.665*pow(axis_L_value, 3))/(7000))+0.05*(axis_L_value);
 
-      //----------Potentially use FR and FL instead of the motor groups
+    //medium
+    //R_percentage = (0.00001*pow(axis_R_value, 3))+(0.000000009*pow(axis_R_value, 5));
+    //L_percentage = (0.00001*pow(axis_L_value, 3))+(0.000000009*pow(axis_L_value, 5));
 
-    //R_percentage = ((0.665*pow(axis_R, 3))/(7000))+0.05*(axis_R);
-    //L_percentage = ((0.665*pow(axis_L, 3))/(7000))+0.05*(axis_L);
+    //slow BAD
+    //R_percentage = (0.00007*pow(axis_R_value, 3))+(0.000000003*pow(axis_R_value, 5));
+    //L_percentage = (0.00007*pow(axis_L_value, 3))+(0.000000003*pow(axis_L_value, 5));
 
-    //new exponential function
-    R_percentage = (0.00001*pow(axis_R, 3))+(0.000000009*pow(axis_R, 5));
-    L_percentage = (0.00001*pow(axis_L, 3))+(0.000000009*pow(axis_L, 5));
-
-    //OR
-
-    //R_percentage = (0.00007*pow(axis_R, 3))+(0.000000003*pow(axis_R, 5));
-    //L_percentage = (0.00007*pow(axis_L, 3))+(0.000000003*pow(axis_L, 5));
-
+    //NONE
+    R_percentage =axis_R_value;
+    L_percentage =axis_L_value;
 
     //acceleration dampening
-    //check that rate at which the joystick is moved
-    double rate_R = axis_R - R_speed;
-    double rate_L = axis_R - R_speed;
-
-    //rate of change modifier
-    float s = 0.03;                  //NEED TO TUNE
-      R_percentage -= rate_R * s;
-      L_percentage -= rate_L * s;
 
     //right side dampening
+
     if (R_percentage > R_run + ImaxStep)
     {
       R_run += ImaxStep; 
@@ -159,6 +144,7 @@ motor_group L= motor_group(FL, ML, BL);
       L_run = L_percentage;
     }
 
+
     //keeps the values between (100, -100)
     //R side
     if (R_run > 100)
@@ -181,16 +167,17 @@ motor_group L= motor_group(FL, ML, BL);
 
     int right_volt = setVolt(-R_run);
     int left_volt = setVolt(-L_run);
-      
+
+    //int right_volt = setVolt(-R_percentage);
+    //int left_volt = setVolt(-L_percentage);
+
     //runnning the motors
     R.spin(fwd, right_volt, volt);
     L.spin(fwd, left_volt, volt);
 
     wait(10, msec);
-    
+    }
   }
-}
-
 
 int intake_controls()
   {
@@ -198,30 +185,30 @@ int intake_controls()
     {
       if (Controller1.ButtonR2.pressing())
       {
-        right_intake.spin(fwd, 600, rpm);
-        left_intake.spin(fwd, 600, rpm);
+        right_intake.spin(fwd, 12, volt);
+        left_intake.spin(fwd, 12, volt);
       }
 
       else if (Controller1.ButtonL2.pressing())
       {
-        right_intake.spin(reverse, 600, rpm);
+        right_intake.spin(reverse, 12, volt);
       }
       
       else if (Controller1.ButtonL1.pressing())
       {
-        right_intake.spin(reverse, 600, rpm);
-        left_intake.spin(reverse, 600, rpm);
+        right_intake.spin(reverse, 12, volt);
+        left_intake.spin(reverse, 12, volt);
       }
 
       else if (Controller1.ButtonR1.pressing())
       {
-        left_intake.spin(fwd, 600, rpm);
+        left_intake.spin(fwd, 12, volt);
       }
 
       else
       {
-        right_intake.stop(coast);
-        left_intake.stop(coast);
+        right_intake.stop(brake);
+        left_intake.stop(brake);
       }
 
 
@@ -322,9 +309,9 @@ void pre_auton(void) {
 ░█▄▄▀ ░█─░█ ▄█▄ ──▀▄▀─ ░█▄▄▄ 　 ░█─── ▄█▄ ░█▄▄▀
 */
 
-float Kp = .009;
-float Kd = -1000;
-float kI = .003;
+float Kp = 0.009; //oldish 10
+float Kd = -1000; //old -1000 oldish 20
+float kI = 0.003; //old .003
 
 float error;
 float derivative;
@@ -334,27 +321,18 @@ float currentvalue;
 float output;
 
 float speed_;
+float dSpeed = 0;
 
 
 void drivePD(float targetvalue){
 
 Rotate.resetPosition ();
-error = 0;
 speed_ = 1;
 
 while(true)
 {
-  // radius = 2.75/2 = 1.375in
-  //360 deg = 1 rotation, 1 rot = 2pi*r = 8.64in for circumference
-  //360/8.64 = 41.67
-/*
-  if (fabs(targetvalue) < 10)
-  {
-    speed_ = 0.5;
-    break;
-  }
-*/
-  if (fabs(targetvalue) < 2.5)
+
+   if (fabs(targetvalue) < 2.5)
   {
     speed_ = 0.2;
     break;
@@ -366,7 +344,7 @@ while(true)
     integral += error;
     output = (error*Kp) + (derivative*Kd) + (integral*kI);
     previouserror = error;
-    R.spin(reverse, 0.05*output*speed_, rpm);
+    R.spin(reverse, 0.05*output*speed_, rpm); //old 0.05
     L.spin(reverse, 0.05*output*speed_, rpm); 
     if((fabs(error) < 1.0 && fabs(error - previouserror) < 0.5)){
       L.stop(brake);
@@ -421,7 +399,7 @@ while(1)
       L.stop(brake);
       R.stop(brake);
       wait(.1, sec);
-    break;
+      break;
     }    
    }
 }
@@ -443,21 +421,21 @@ void autonomous(void) {
 ███████╗███████╗██║░░░░░░░░██║░░░  ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝██║░╚███║
 ╚══════╝╚══════╝╚═╝░░░░░░░░╚═╝░░░  ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░╚═╝░░╚══╝
 */
+
 /*
 //drive to the blocks
   matchloader.set(false);
   right_intake.spin(reverse, 100, pct);
   drivePD(10);
-  structure.set(true);
   drivePD(15);
   wait(.1, sec);
-  R.spin(fwd, -25, rpm);
-  L.spin(fwd, -25, rpm);
-  wait(2.5, sec);
+  R.spin(fwd, -50, rpm);
+  L.spin(fwd, -50, rpm);
+  wait(1.3, sec); //old 1.25
   R.stop(brake);
   L.stop(brake);
 
-  wait(.8, sec);
+  wait(.2, sec);
   drivePD(1.5);
 
   //drive to the matchloader
@@ -467,41 +445,45 @@ void autonomous(void) {
   wait(.1, sec);
   drivePD(12);
   drivePD(12);
-  drivePD(14);
-  wait(.05, sec);
+  drivePD(15); //12
+  wait(.2, sec);
   turnPD(-62);
   matchloader.set(true);
-  wait(.8, sec);
+  wait(.2, sec);
   right_intake.spin(reverse, 100, pct);
   
   R.spin(fwd, -125, rpm);
   L.spin(fwd, -125, rpm);
-  wait(1.4, sec);
+  wait(1.25, sec); //1.4
   R.stop(coast);
   L.stop(coast);
-
+  /*
   R.spin(fwd, -10, rpm);
   L.spin(fwd, -10, rpm);
-  wait(.4, sec);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
 
-  wait(.3, sec);
+  wait(.05, sec);
 
-  R.spin(fwd, -10, rpm);
-  L.spin(fwd, -10, rpm);
-  wait(.4, sec);
+  R.spin(fwd, 10, rpm);
+  L.spin(fwd, 10, rpm);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
+*/
 
   //drive to the long goal
-  wait(1, sec);
-  structure.set(false);
+  /*
+  wait(0.4, sec);
   drivePD(-10);
   drivePD(-11);
-  drivePD(-10.8);
+  drivePD(-9);
   matchloader.set(false);
   drivePD(-8.5);
+  right_intake.spin(fwd, 12, volt);
+  left_intake.spin(fwd, 12, volt);
+  wait(0.1, sec);
   left_intake.spin(reverse, 600, rpm);
   right_intake.stop(coast);
   right_intake.spin(reverse, 600, rpm);
@@ -518,20 +500,18 @@ void autonomous(void) {
 */
 
 //drive to the blocks
-/*
   matchloader.set(false);
   right_intake.spin(reverse, 100, pct);
   drivePD(10);
-  structure.set(true);
   drivePD(15);
   wait(.1, sec);
-  R.spin(fwd, -25, rpm);
-  L.spin(fwd, -25, rpm);
-  wait(2.5, sec);
+  R.spin(fwd, -50, rpm);
+  L.spin(fwd, -50, rpm);
+  wait(1.3, sec); //old 1.25
   R.stop(brake);
   L.stop(brake);
 
-  wait(.8, sec);
+  wait(.2, sec);
   drivePD(1.5);
 
   //drive to the matchloader
@@ -541,61 +521,44 @@ void autonomous(void) {
   wait(.1, sec);
   drivePD(12);
   drivePD(12);
-  drivePD(14);
-  wait(.05, sec);
+  drivePD(15); //12
+  wait(.2, sec);
   turnPD(62);
   matchloader.set(true);
-  wait(.8, sec);
+  wait(.2, sec);
   right_intake.spin(reverse, 100, pct);
-
-  //TOO LONG
-
+  
   R.spin(fwd, -125, rpm);
   L.spin(fwd, -125, rpm);
-  wait(1.4, sec);
+  wait(1.25, sec); //1.4
   R.stop(coast);
   L.stop(coast);
-
-  R.spin(fwd, -10, rpm);
-  L.spin(fwd, -10, rpm);
-  wait(.4, sec);
-  R.stop(coast);
-  L.stop(coast);
-
-  wait(.3, sec);
-
-  R.spin(fwd, -10, rpm);
-  L.spin(fwd, -10, rpm);
-  wait(.4, sec);
-  R.stop(coast);
-  L.stop(coast);
-//////////////////////////////////////////////////////////////////////////////////
-
-
-  //NEW NEED TO TEST
   /*
-  R.spin(fwd, -600, rpm);
-  L.spin(fwd, -600, rpm);
-  wait(.4, sec);
+  R.spin(fwd, -10, rpm);
+  L.spin(fwd, -10, rpm);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
 
-  R.spin(fwd, -125, rpm);
-  L.spin(fwd, -125, rpm);
-  wait(1, sec);
+  wait(.05, sec);
+
+  R.spin(fwd, 10, rpm);
+  L.spin(fwd, 10, rpm);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
-  */
+*/
 
   //drive to the long goal
-  /*
-  wait(1, sec);
-  structure.set(false);
+  wait(0.4, sec);
   drivePD(-10);
   drivePD(-11);
-  drivePD(-10.8);
+  drivePD(-9);
   matchloader.set(false);
   drivePD(-8.5);
+  right_intake.spin(fwd, 12, volt);
+  left_intake.spin(fwd, 12, volt);
+  wait(0.1, sec);
   left_intake.spin(reverse, 600, rpm);
   right_intake.stop(coast);
   right_intake.spin(reverse, 600, rpm);
@@ -611,21 +574,21 @@ void autonomous(void) {
 ╚═════╝░╚═╝░░╚═╝╚═╝╚══════╝╚══════╝╚═════╝░  ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░╚═╝░░╚══╝
 */
 
+
+/*
 //drive to the blocks
   matchloader.set(false);
   right_intake.spin(reverse, 100, pct);
   drivePD(10);
-  structure.set(true);
-  drivePD(17.5);
+  drivePD(15);
   wait(.1, sec);
-  R.spin(fwd, -25, rpm);
-  L.spin(fwd, -25, rpm);
-  wait(2.2, sec); //old 1.9
+  R.spin(fwd, -50, rpm);
+  L.spin(fwd, -50, rpm);
+  wait(1.3, sec); //old 1.25
   R.stop(brake);
   L.stop(brake);
 
-  //turnPD(-15);
-  wait(.8, sec);
+  wait(.2, sec);
   drivePD(1.5);
 
   //drive to the matchloader
@@ -635,72 +598,64 @@ void autonomous(void) {
   wait(.1, sec);
   drivePD(12);
   drivePD(12);
-  drivePD(14);
-  wait(.05, sec);
-  turnPD(-58);
+  drivePD(15); //12
+  wait(.2, sec);
+  turnPD(-62);
   matchloader.set(true);
-  wait(.8, sec);
+  wait(.2, sec);
   right_intake.spin(reverse, 100, pct);
-  //drivePD(7);
-//TOO LONG
-/*
+  
   R.spin(fwd, -125, rpm);
   L.spin(fwd, -125, rpm);
-  wait(1.4, sec);
+  wait(1.25, sec); //1.4
+  R.stop(coast);
+  L.stop(coast);
+  /*
+  R.spin(fwd, -10, rpm);
+  L.spin(fwd, -10, rpm);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
 
-  R.spin(fwd, -10, rpm);
-  L.spin(fwd, -10, rpm);
-  wait(.4, sec);
-  R.stop(coast);
-  L.stop(coast);
+  wait(.05, sec);
 
-  wait(.3, sec);
-
-  R.spin(fwd, -10, rpm);
-  L.spin(fwd, -10, rpm);
-  wait(.4, sec);
+  R.spin(fwd, 10, rpm);
+  L.spin(fwd, 10, rpm);
+  wait(.001, sec);
   R.stop(coast);
   L.stop(coast);
 */
 
-//NEW
-  R.spin(fwd, -600, rpm);
-  L.spin(fwd, -600, rpm);
-  wait(.4, sec);
-  R.stop(coast);
-  L.stop(coast);
-
-  R.spin(fwd, -125, rpm);
-  L.spin(fwd, -125, rpm);
-  wait(.5, sec);
-  R.stop(coast);
-  L.stop(coast);
-
-  //drive to the long goal and score
-  wait(1, sec);
-  structure.set(false);
+  //drive to the long goal
+  /*
+  wait(0.4, sec);
   drivePD(-10);
   drivePD(-11);
-  drivePD(-10.8);
+  drivePD(-9);
   matchloader.set(false);
   drivePD(-8.5);
+  right_intake.spin(fwd, 12, volt);
+  left_intake.spin(fwd, 12, volt);
+  wait(0.1, sec);
   left_intake.spin(reverse, 600, rpm);
   right_intake.stop(coast);
   right_intake.spin(reverse, 600, rpm);
+  wait(2, sec);
+  drivePD(10);
 
+  /*
   wait(.5, sec);
   drivePD(10);
   turnPD(135);
   drivePD(-35);
   turnPD(-45);
   drivePD(-25);
+  */
 
-/*
+
 //drive to second matchloader
+/*
 drivePD(15);
-structure.set(true);
 wait(.1,sec);
 turnPD(90);
 drivePD(-32);
@@ -708,7 +663,7 @@ drivePD(-25);
 drivePD(-25);
 drivePD(-25);
 turnPD(-90);
-matchloader.set(true);
+matchloader.set(false);
 right_intake.spin(reverse, 100, pct);
 wait(.1, sec);
 drivePD(10);
@@ -716,30 +671,36 @@ wait(2,sec);
 //drivePD(-20);
 //drivePD(-16);
 wait(1, sec);
-structure.set(false);
 drivePD(-10);
 drivePD(-11);
 drivePD(-10.8);
-matchloader.set(false);
+matchloader.set(true);
 drivePD(-8.5);
 left_intake.spin(reverse, 600, rpm);
 right_intake.stop(coast);
 right_intake.spin(reverse, 600, rpm);
 
 //skills park
-
 drivePD(10);
 turnPD(-135);
 drivePD(60);
 turnPD(45);
 drivePD(40);
 
-///////////////////NEW SKILLS 
-
-
-//////////////////
-drivePD(18);
+*/
+//NEW AUTON
+//drivePD(24); 
+//wait(1, sec);
+//drivePD(12);
+//drivePD(12);
+/*
 turnPD(-90);
+drivePD(4);
+right_intake.spin(reverse, 12, volt);
+drivePD(1);
+wait(4, sec);
+
+
 
 
 
@@ -749,16 +710,18 @@ turnPD(-90);
 ▀░░ ▀░▀▀ ▀▀▀ ▀▀▀ 　 ▀░░▀ ░▀▀▀ ░░▀░░ ▀▀▀▀ ▀░░▀
 */
 
-  //drivePD(10);
-
+  //drivePD(8);
   /*
-  R.spin(fwd, 200, rpm);
-  L.spin(fwd, 200, rpm);
-  wait(1.1, sec);
+  right_intake.spin(fwd, 12, volt);
+  matchloader.set(false);
+  wait(0.8, sec);
+  R.spin(reverse, 200, rpm);
+  L.spin(reverse, 200, rpm);
+  wait(1.64, sec);
   R.stop(brake);
   L.stop(brake);
-  */
-
+  right_intake.stop(brake);
+*/
 }
 
 
