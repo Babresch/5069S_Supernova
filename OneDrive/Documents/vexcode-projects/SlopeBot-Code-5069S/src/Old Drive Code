@@ -1,1 +1,12 @@
+while(true){
 
+    axis_R = (Controller1.Axis3.position(pct) + 0.7*Controller1.Axis1.position(pct));
+    axis_L = (Controller1.Axis3.position(pct) - 0.7*Controller1.Axis1.position(pct));
+
+    R_percentage = ((0.665*pow(axis_R, 3))/(7000))+0.05*(axis_R);
+    L_percentage = ((0.665*pow(axis_L, 3))/(7000))+0.05*(axis_L);
+
+    R.spin(fwd, -R_percentage, pct);
+    L.spin(fwd, -L_percentage, pct);
+    wait(1, msec);
+    }
